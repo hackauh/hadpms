@@ -23,13 +23,15 @@ export function generateSessionToken(): string {
   const timestamp = Date.now().toString(36)
   const randomPart1 = Math.random().toString(36).substring(2)
   const randomPart2 = Math.random().toString(36).substring(2)
-  return `${timestamp}-${randomPart1}-${randomPart2}`
+  return `had_${timestamp}_${randomPart1}_${randomPart2}`
 }
 
 // Simple password verification (for the hardcoded credentials)
 export async function verifyCredentials(email: string, password: string): Promise<AdminUser | null> {
   try {
     console.log("Verifying credentials for:", email)
+    console.log("Database URL configured:", !!process.env.DATABASE_URL)
+
     // Hardcoded credentials check
     if (email === "team@hackabudhabi.com" && password === "Had@2025") {
       console.log("✅ Credentials verified successfully")
@@ -52,21 +54,29 @@ export async function verifyCredentials(email: string, password: string): Promis
 // Create user session
 export async function createSession(email: string): Promise<string> {
   try {
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL not configured")
+    }
+
     const sessionToken = generateSessionToken()
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
     console.log("Creating session...")
     console.log("- Email:", email)
-    console.log("- Token:", sessionToken)
+    console.log("- Token:", sessionToken.substring(0, 15) + "...")
     console.log("- Expires:", expiresAt.toISOString())
 
     // Clean up any existing sessions for this email first
-    const deleteResult = await sql`
-      DELETE FROM user_sessions 
-      WHERE email = ${email}
-      RETURNING *
-    `
-    console.log("Deleted", deleteResult.length, "existing sessions")
+    try {
+      const deleteResult = await sql`
+        DELETE FROM user_sessions 
+        WHERE email = ${email}
+        RETURNING *
+      `
+      console.log("Deleted", deleteResult.length, "existing sessions")
+    } catch (deleteError) {
+      console.warn("Could not delete existing sessions:", deleteError)
+    }
 
     // Create new session
     const result = await sql`
@@ -75,7 +85,7 @@ export async function createSession(email: string): Promise<string> {
       RETURNING *
     `
 
-    console.log("✅ Session created successfully:", result[0])
+    console.log("✅ Session created successfully")
     return sessionToken
   } catch (error) {
     console.error("❌ Error in createSession:", error)
@@ -86,7 +96,12 @@ export async function createSession(email: string): Promise<string> {
 // Get session by token
 export async function getSessionByToken(token: string): Promise<UserSession | null> {
   try {
-    console.log("Looking up session for token:", token.substring(0, 10) + "...")
+    if (!process.env.DATABASE_URL) {
+      console.error("DATABASE_URL not configured")
+      return null
+    }
+
+    console.log("Looking up session for token:", token.substring(0, 15) + "...")
 
     const result = await sql`
       SELECT * FROM user_sessions 
@@ -111,13 +126,13 @@ export async function getSessionByToken(token: string): Promise<UserSession | nu
 export async function getCurrentUser(): Promise<AdminUser | null> {
   try {
     console.log("=== GET CURRENT USER ===")
-    const cookieStore = await cookies()
-    const allCookies = cookieStore.getAll()
-    console.log("All cookies:", allCookies)
+    console.log("Environment:", process.env.NODE_ENV)
+    console.log("Database configured:", !!process.env.DATABASE_URL)
 
+    const cookieStore = await cookies()
     const sessionToken = cookieStore.get("session_token")?.value
 
-    console.log("Session token from cookies:", sessionToken ? sessionToken.substring(0, 10) + "..." : "missing")
+    console.log("Session token from cookies:", sessionToken ? sessionToken.substring(0, 15) + "..." : "missing")
 
     if (!sessionToken) {
       console.log("❌ No session token found in cookies")
@@ -153,7 +168,12 @@ export async function getCurrentUser(): Promise<AdminUser | null> {
 // Logout - invalidate session
 export async function logout(sessionToken: string): Promise<void> {
   try {
-    console.log("Logging out session:", sessionToken.substring(0, 10) + "...")
+    if (!process.env.DATABASE_URL) {
+      console.warn("DATABASE_URL not configured for logout")
+      return
+    }
+
+    console.log("Logging out session:", sessionToken.substring(0, 15) + "...")
     const result = await sql`
       DELETE FROM user_sessions 
       WHERE session_token = ${sessionToken}
@@ -168,6 +188,11 @@ export async function logout(sessionToken: string): Promise<void> {
 // Clean up expired sessions
 export async function cleanupExpiredSessions(): Promise<void> {
   try {
+    if (!process.env.DATABASE_URL) {
+      console.warn("DATABASE_URL not configured for cleanup")
+      return
+    }
+
     const result = await sql`
       DELETE FROM user_sessions 
       WHERE expires_at < NOW()

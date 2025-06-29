@@ -8,7 +8,8 @@ export async function POST(request: NextRequest) {
 
     console.log("=== LOGIN API START ===")
     console.log("Login attempt for:", email)
-    console.log("Request headers:", Object.fromEntries(request.headers.entries()))
+    console.log("Environment:", process.env.NODE_ENV)
+    console.log("Host:", request.headers.get("host"))
 
     if (!email || !password) {
       console.log("Missing email or password")
@@ -39,7 +40,6 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       message: "Login successful",
-      sessionToken: sessionToken, // Include in response for debugging
       user: {
         email: user.email,
         name: user.name,
@@ -48,34 +48,39 @@ export async function POST(request: NextRequest) {
 
     console.log("Setting cookie with token:", sessionToken)
 
-    // Set session cookie with explicit settings
+    // Determine if we're in production
+    const isProduction = process.env.NODE_ENV === "production"
+    const host = request.headers.get("host")
+    const isVercel = host?.includes("vercel.app") || host?.includes("hackabudhabi.com")
+
+    // Set session cookie with environment-appropriate settings
     response.cookies.set("session_token", sessionToken, {
       httpOnly: true,
-      secure: false, // Set to false for development
+      secure: isProduction, // Use secure cookies in production
       sameSite: "lax",
       maxAge: 24 * 60 * 60, // 24 hours in seconds
       path: "/",
+      domain: isVercel && isProduction ? undefined : undefined, // Let browser handle domain
     })
 
-    // Also try setting a test cookie to verify cookie functionality
-    response.cookies.set("test_cookie", "test_value", {
-      httpOnly: false,
-      secure: false,
+    console.log("Cookie settings:", {
+      httpOnly: true,
+      secure: isProduction,
       sameSite: "lax",
       maxAge: 24 * 60 * 60,
       path: "/",
+      isProduction,
+      host,
     })
 
-    console.log("Cookies set on response")
-    console.log("Response headers:", Object.fromEntries(response.headers.entries()))
     console.log("=== LOGIN API END ===")
-
     return response
   } catch (error) {
     console.error("Login error:", error)
     return NextResponse.json(
       {
         error: "Failed to login",
+        details: process.env.NODE_ENV === "development" ? error.message : undefined,
       },
       { status: 500 },
     )
