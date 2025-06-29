@@ -1,7 +1,7 @@
-export const dynamic = "force-dynamic"
-
 import { NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth"
+
+export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
@@ -13,7 +13,7 @@ export async function GET() {
 
     return NextResponse.json({ user })
   } catch (error) {
-    console.error("Get current user error:", error)
-    return NextResponse.json({ error: "Authentication failed" }, { status: 401 })
+    console.error("Error in getCurrentUser:", error)
+    return NextResponse.json({ error: "Authentication failed" }, { status: 500 })
   }
 }
