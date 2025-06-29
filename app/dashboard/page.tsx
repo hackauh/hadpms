@@ -6,6 +6,8 @@ import { BulkDeleteDialog } from "@/components/bulk-delete-dialog"
 import { BulkBadgeGenerator } from "@/components/bulk-badge-generator"
 import { getAllParticipants } from "@/lib/db"
 
+export const dynamic = "force-dynamic"
+
 export default async function DashboardPage() {
   console.log("=== DASHBOARD PAGE LOADING ===")
   console.log("Environment:", process.env.NODE_ENV)
@@ -99,8 +101,8 @@ export default async function DashboardPage() {
           </div>
           <div className="flex gap-2">
             <BulkBadgeGenerator participants={participants || []} />
-            <BulkDeleteDialog participants={participants || []} onDelete={() => {}} />
-            <ManualAddParticipant onParticipantAdded={() => {}} />
+            <BulkDeleteDialog participants={participants || []} />
+            <ManualAddParticipant />
           </div>
         </div>
 
