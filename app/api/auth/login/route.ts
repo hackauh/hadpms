@@ -13,10 +13,10 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password) {
       console.log("Missing email or password")
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
+      return NextResponse.json({ error: "Email/ID and password are required" }, { status: 400 })
     }
 
-    // Verify credentials
+    // Verify credentials (now supports both email and admin ID)
     console.log("Verifying credentials...")
     const user = await verifyCredentials(email, password)
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       console.log("Invalid credentials for:", email)
       return NextResponse.json(
         {
-          error: "Invalid email or password",
+          error: "Invalid email/ID or password",
         },
         { status: 401 },
       )

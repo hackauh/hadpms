@@ -27,14 +27,25 @@ export function generateSessionToken(): string {
 }
 
 // Simple password verification (for the hardcoded credentials)
-export async function verifyCredentials(email: string, password: string): Promise<AdminUser | null> {
+export async function verifyCredentials(emailOrId: string, password: string): Promise<AdminUser | null> {
   try {
-    console.log("Verifying credentials for:", email)
+    console.log("Verifying credentials for:", emailOrId)
     console.log("Database URL configured:", !!process.env.DATABASE_URL)
 
-    // Hardcoded credentials check
-    if (email === "team@hackabudhabi.com" && password === "Had@2025") {
-      console.log("✅ Credentials verified successfully")
+    // Check for admin ID login
+    if (emailOrId === "admin" && password === "Had@2025") {
+      console.log("✅ Admin ID credentials verified successfully")
+      return {
+        id: 2,
+        email: "admin@hackabudhabi.com",
+        name: "Admin User",
+        created_at: new Date().toISOString(),
+      }
+    }
+
+    // Check for team email login
+    if (emailOrId === "team@hackabudhabi.com" && password === "Had@2025") {
+      console.log("✅ Team email credentials verified successfully")
       return {
         id: 1,
         email: "team@hackabudhabi.com",
@@ -153,6 +164,16 @@ export async function getCurrentUser(): Promise<AdminUser | null> {
         id: 1,
         email: "team@hackabudhabi.com",
         name: "Hack Abu Dhabi Team",
+        created_at: new Date().toISOString(),
+      }
+    }
+
+    // Return the hardcoded user for the admin email
+    if (session.email === "admin@hackabudhabi.com") {
+      return {
+        id: 2,
+        email: "admin@hackabudhabi.com",
+        name: "Admin User",
         created_at: new Date().toISOString(),
       }
     }
